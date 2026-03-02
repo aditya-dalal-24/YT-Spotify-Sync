@@ -2,6 +2,8 @@ import base64
 import requests
 import os
 from flask import Flask, request, redirect
+import json
+import os
 
 app = Flask(__name__)
 
@@ -15,6 +17,7 @@ SPOTIFY_API_BASE = "https://api.spotify.com/v1"
 
 access_token = None
 refresh_token = None
+TOKEN_FILE = "tokens.json"
 
 
 @app.route("/")
@@ -61,6 +64,7 @@ def callback():
 
     access_token = tokens.get("access_token")
     refresh_token = tokens.get("refresh_token")
+    save_tokens()
 
     return "Authorization successful. You can close this tab."
 
@@ -141,6 +145,66 @@ def state():
 
     return {"is_playing": data.get("is_playing", False)}
 
+def save_tokens():
+    with open(TOKEN_FILE, "w") as f:
+        json.dump({
+            "refresh_token": refresh_token
+        }, f)
 
+def load_tokens():
+    global refresh_token
+
+    if os.path.exists(TOKEN_FILE):
+        with open(TOKEN_FILE, "r") as f:
+            data = json.load(f)
+            refresh_token = data.get("refresh_token")
+
+            def initialize_access_token():
+                global access_token
+
+    if refresh_token:
+        auth_header = base64.b64encode(
+            f"{CLIENT_ID}:{CLIENT_SECRET}".encode()
+        ).decode()
+
+        headers = {
+            "Authorization": f"Basic {auth_header}",
+            "Content-Type": "application/x-www-form-urlencoded",
+        }
+
+        data = {
+            "grant_type": "refresh_token",
+            "refresh_token": refresh_token,
+        }
+
+        response = requests.post(SPOTIFY_TOKEN_URL, headers=headers, data=data)
+        tokens = response.json()
+
+        access_token = tokens.get("access_token")
+
+def initialize_access_token():
+    global access_token
+
+    if refresh_token:
+        auth_header = base64.b64encode(
+            f"{CLIENT_ID}:{CLIENT_SECRET}".encode()
+        ).decode()
+
+        headers = {
+            "Authorization": f"Basic {auth_header}",
+            "Content-Type": "application/x-www-form-urlencoded",
+        }
+
+        data = {
+            "grant_type": "refresh_token",
+            "refresh_token": refresh_token,
+        }
+
+        response = requests.post(SPOTIFY_TOKEN_URL, headers=headers, data=data)
+        tokens = response.json()
+
+        access_token = tokens.get("access_token")        
 if __name__ == "__main__":
+    load_tokens()
+    initialize_access_token()
     app.run(port=5000)
