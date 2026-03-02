@@ -27,3 +27,12 @@ setInterval(() => {
     const video = document.querySelector("video");
     if (video) attach(video);
 }, 1000);
+
+chrome.runtime.onMessage.addListener((message) => {
+    if (message === "pauseYouTube") {
+        const video = document.querySelector("video");
+        if (video && !video.paused) {
+            video.pause();
+        }
+    }
+});
